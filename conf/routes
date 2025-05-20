@@ -1,0 +1,12 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+# Websocket Connection
+GET   /ws/chat/:userId/:roomId     controllers.ChatController.chatSocket(userId: String, roomId: String)
+
+# chat Page
+GET   /chat/:userId/:roomId        controllers.ChatController.chat(userId: String, roomId: String)
+
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
