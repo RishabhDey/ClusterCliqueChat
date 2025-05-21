@@ -1,6 +1,6 @@
 package model
 
-import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, JsonValidationError, OFormat, OWrites, Reads, Writes}
 
 
 /*Json.toJson requires implicits to convert from Scala Objects to JSON files. I opted to collate all
@@ -61,17 +61,38 @@ object JsonFormats {
     }
 
     override def reads(json: JsValue): JsResult[UserEvent] = (json \ "type").validate[String].flatMap {
-      case "UserJoined" => formatUserJoined.reads(json)
-      case "UserLeft" => formatUserLeft.reads(json)
+      case "UserJoined" =>
+        val jsonWithoutType = json.as[JsObject] - "type"
+        formatUserJoined.reads(jsonWithoutType)
+      case "UserLeft" =>
+        val jsonWithoutType = json.as[JsObject] - "type"
+        formatUserLeft.reads(jsonWithoutType)
       case other => JsError(s"Unknown user event type: $other")
     }
   }
+
+
+
+  implicit val readTypedChatRoom: Reads[ChatRoom] = (json: JsValue) => {
+    (json \ "type").validate[String].flatMap {
+      case "ChatRoom" =>
+        val jsonWithoutType = json.as[JsObject] - "type"
+        formatBaseChatRoom.reads(jsonWithoutType)
+      case other => JsError(s"Unknown Type: $other")
+    }
+  }
+
+  implicit val writeTypedChatRoom: OWrites[ChatRoom] = (chatRoom: ChatRoom) => {
+    formatBaseChatRoom.writes(chatRoom).as[JsObject] + ("type" -> JsString("ChatRoom"))
+  }
+  implicit val formatBaseChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
+  implicit val formatTypedChatRoom: OFormat[ChatRoom] = OFormat(readTypedChatRoom, writeTypedChatRoom)
 
   implicit val formatUser: OFormat[User] = Json.format[User]
   implicit val formatUserJoined: OFormat[UserJoined] = Json.format[UserJoined]
   implicit val formatUserLeft: OFormat[UserLeft] = Json.format[UserLeft]
 
-  implicit val formatChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
+
 
   implicit val formatPost: OFormat[Post] = Json.format[Post]
   implicit val formatChatMessage: OFormat[ChatMessage] = Json.format[ChatMessage]

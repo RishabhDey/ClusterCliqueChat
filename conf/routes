@@ -4,6 +4,9 @@
 # ~~~~
 
 # Websocket Connection
+
+GET     /       controllers.ChatController.index
+
 GET   /ws/chat/:userId/:roomId     controllers.ChatController.chatSocket(userId: String, roomId: String)
 
 # chat Page

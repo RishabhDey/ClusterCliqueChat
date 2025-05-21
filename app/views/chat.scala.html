@@ -1,2 +1,84 @@
 @(roomId: String, userId: String)
 
+@main("Chat Room") {
+    <h2>Room: @roomId | User: @userId</h2>
+    <div style = "display: flex; gap: 20px;">
+        <div style = "flex: 2;">
+            <div id="ChatBox"></div>
+            <div id="SendChatMessagePrompt">
+                <label for="chatInput">Enter Message:</label>
+                <input id="chatInput" type="text" placeholder="Type a Message ..."/>
+                <button onclick="sendChatMessage()">Send Chat</button>
+            </div>
+
+            <div id = "SendPostMessageButton">
+                <button onclick="showPostInput()">Send Post</button>
+            </div>
+
+            <div id="postInputContainer" style="display: none; margin-top: 10px;">
+                <label for="PostInput">Enter Post:</label>
+                <input id="PostInput" type="text" placeholder="Type a URL ..."/>
+                <button onclick="sendPostMessage()">Submit Post</button>
+            </div>
+        </div>
+        <div style="flex: 1;">
+            <h4>Users</h4>
+            <table id="user-table" border="1">
+                <thead>
+                <tr><th>User ID</th><th>Status</th></tr>
+                </thead>
+                <tbody id="user-status"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const userId = "@userId";
+        const roomId = "@roomId";
+        const socket = new WebSocket(ws://${window.location.host}/ws/chat/${userId}/${roomId});
+
+        const chatBox = document.getElementById("chat-box");
+        const userTable = document.getElementById("user-status");
+
+        const userStatus = {};
+
+        socket.onmessage = function(event) {
+            const msg = JSON.parse(event.data)
+
+            if(Array.isArray(msg)) {
+                msg.forEach(handleMessage);
+            }else{
+                handleMessage(msg);
+            }
+        };
+
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case "chat":
+                    appendMessage('[${msg.user.userId}]: ${msg.message}');
+                    break;
+                case "post":
+                    appendMessage('[${msg.user.userId}]: ${msg.message}');
+                    appendPost(msg.post.imgURL);
+                    break;
+                case "UserJoined":
+                    userStatus[msg.user.userId] = msg.user.status.status;
+                    updateUserTable();
+                    break;
+                case "UserLeft":
+                    userStatus[msg.user.userId] = msg.user.status.status;
+                    updateUserTable();
+                    break;
+                case "ChatRoom":
+                    msg.users.forEach(u => {
+                        userStatus[u.userId] = u.status.status;
+                    });
+                    updateUserTable();
+                    msg.messages.forEach(handleMessage);
+                    break;
+            }
+
+        }
+
+
+}

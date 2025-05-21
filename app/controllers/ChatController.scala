@@ -25,6 +25,11 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
 
   private val chatManager: ActorRef = system.actorOf(Props(new ChatManager(this)), "ChatManager")
   private val chatModel = new ChatModel()
+
+  def index = Action {
+    Ok(views.html.index())
+  }
+
   def chat(roomId: String, userId: String) = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.chat(roomId, userId))
   }
@@ -46,5 +51,7 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
   def saveSnapshot(chatRoom: ChatRoom):Unit = {
      chatModel.saveSnapshot(chatRoom)
   }
+
+
 
 }
