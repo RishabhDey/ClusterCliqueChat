@@ -53,8 +53,9 @@ class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRef: S
     case snapshot: ChatRoom =>
       out ! Json.toJson(snapshot)
 
-    case msgs: Seq[Message] =>
-      out ! Json.toJson(msgs)
+    case msgs: Seq[_] if msgs.forall(_.isInstanceOf[Message]) =>
+      val typedMsgs = msgs.asInstanceOf[Seq[Message]]
+      out ! Json.toJson(typedMsgs)
 
     case msg: UserJoined =>
       out ! Json.toJson(msg)

@@ -16,69 +16,25 @@
             </div>
 
             <div id="postInputContainer" style="display: none; margin-top: 10px;">
-                <label for="PostInput">Enter Post:</label>
-                <input id="PostInput" type="text" placeholder="Type a URL ..."/>
+                <label for="postInput">Enter Post:</label>
+                <input id="postInput" type="text" placeholder="Type a URL ..."/>
                 <button onclick="sendPostMessage()">Submit Post</button>
             </div>
         </div>
         <div style="flex: 1;">
             <h4>Users</h4>
-            <table id="user-table" border="1">
+            <table id="userTable" border="1">
                 <thead>
                 <tr><th>User ID</th><th>Status</th></tr>
                 </thead>
-                <tbody id="user-status"></tbody>
+                <tbody id="userStatus"></tbody>
             </table>
         </div>
     </div>
-
+    <script src="@routes.Assets.versioned("js/chat.js")"></script>
     <script type="text/javascript">
-        const userId = "@userId";
-        const roomId = "@roomId";
-        const socket = new WebSocket(ws://${window.location.host}/ws/chat/${userId}/${roomId});
-
-        const chatBox = document.getElementById("chat-box");
-        const userTable = document.getElementById("user-status");
-
-        const userStatus = {};
-
-        socket.onmessage = function(event) {
-            const msg = JSON.parse(event.data)
-
-            if(Array.isArray(msg)) {
-                msg.forEach(handleMessage);
-            }else{
-                handleMessage(msg);
-            }
-        };
-
-        function handleMessage(msg) {
-            switch (msg.type) {
-                case "chat":
-                    appendMessage('[${msg.user.userId}]: ${msg.message}');
-                    break;
-                case "post":
-                    appendMessage('[${msg.user.userId}]: ${msg.message}');
-                    appendPost(msg.post.imgURL);
-                    break;
-                case "UserJoined":
-                    userStatus[msg.user.userId] = msg.user.status.status;
-                    updateUserTable();
-                    break;
-                case "UserLeft":
-                    userStatus[msg.user.userId] = msg.user.status.status;
-                    updateUserTable();
-                    break;
-                case "ChatRoom":
-                    msg.users.forEach(u => {
-                        userStatus[u.userId] = u.status.status;
-                    });
-                    updateUserTable();
-                    msg.messages.forEach(handleMessage);
-                    break;
-            }
-
-        }
+        initChat("@userId", "@roomId");
+    </script>
 
 
 }

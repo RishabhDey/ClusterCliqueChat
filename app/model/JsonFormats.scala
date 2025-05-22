@@ -85,7 +85,7 @@ object JsonFormats {
   implicit val writeTypedChatRoom: OWrites[ChatRoom] = (chatRoom: ChatRoom) => {
     formatBaseChatRoom.writes(chatRoom).as[JsObject] + ("type" -> JsString("ChatRoom"))
   }
-  implicit val formatBaseChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
+  private val formatBaseChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
   implicit val formatTypedChatRoom: OFormat[ChatRoom] = OFormat(readTypedChatRoom, writeTypedChatRoom)
 
   implicit val formatUser: OFormat[User] = Json.format[User]
