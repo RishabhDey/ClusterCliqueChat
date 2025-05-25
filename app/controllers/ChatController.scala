@@ -37,6 +37,7 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
 
   def chatSocket(roomId: String, userId: String) = WebSocket.acceptOrResult[JsValue, JsValue] { request =>
     Future.successful {
+      print("Successful Connection, Continuing")
       val user = new User(userId, "www.example.com", status = Online())
       val flow = webSocketFlow(user, roomId)
       Right(flow)
@@ -45,6 +46,7 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
 
   def webSocketFlow(user: User, roomId: String) = {
     ActorFlow.actorRef { out =>
+      print("Successful Flow, Continuing")
       Props(new ChatUserActor(user, out, chatManager, roomId))
     }
   }

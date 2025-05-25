@@ -2,10 +2,10 @@ const userStatus = {};
 let socket, chatBox, userTable;
 
 function initChat(userId, roomId) {
-  const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${userId}/${roomId}`);
+  socket = new WebSocket(`ws://${window.location.host}/ws/chat/${userId}/${roomId}`);
 
-  const chatBox = document.getElementById("chatBox");
-  const userTable = document.getElementById("userStatus");
+  chatBox = document.getElementById("chatBox");
+  userTable = document.getElementById("userStatus");
 
   socket.onopen = () => {
     console.log("WebSocket is connected");
@@ -69,11 +69,14 @@ function appendImage(url) {
     chatBox.appendChild(img);
 }
 
-function sendChatMessage() {
+function sendChatMessage(currentUser) {
     const input = document.getElementById("chatInput");
     const text = input.value.trim();
     if (text) {
-        socket.send(JSON.stringify({ type: "chat", message: text }));
+        const payload = {
+            sendChatMessage: text
+        };
+        socket.send(JSON.stringify(payload));
         input.value = "";
     }
 }
@@ -84,9 +87,12 @@ function showPostInput() {
 
 function sendPostMessage() {
     const input = document.getElementById("PostInput");
-    const text = input.value.trim();
-    if (text) {
-        socket.send(JSON.stringify({ type: "post", post: { imgURL: text } }));
+    const url = input.value.trim();
+    if (url) {
+        const payload = {
+            sendPostMessage: url
+        };
+        socket.send(JSON.stringify(payload));
         input.value = "";
     }
     document.getElementById("postInputContainer").style.display = "none";

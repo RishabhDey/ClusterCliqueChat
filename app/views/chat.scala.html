@@ -31,8 +31,9 @@
             </table>
         </div>
     </div>
-    <script src="@routes.Assets.versioned("js/chat.js")"></script>
+    <script src='@routes.Assets.versioned("javascripts/chat.js")'></script>
     <script type="text/javascript">
+        const userId = '@userId';
         initChat("@userId", "@roomId");
     </script>
 

@@ -3,7 +3,7 @@ package Actor
 import controllers.ChatController
 import model.ChatRoom
 import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props}
-
+import model.JsonFormats._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -26,6 +26,7 @@ class ChatManager(chatController: ChatController) extends Actor{
   private val rooms = mutable.HashMap[String, ActorRef]()
   def receive: Receive = {
     case GetRoom(roomId) =>
+      println(s"[ChatManager] Starting room $roomId")
       val roomActor = rooms.getOrElseUpdate(roomId, context.actorOf(Props(new ChatRoomActor(roomId, self)), s"chatRoom-$roomId"))
       sender() ! RoomRef(roomActor)
 

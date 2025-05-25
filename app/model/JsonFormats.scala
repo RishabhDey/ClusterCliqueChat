@@ -1,11 +1,19 @@
 package model
 
-import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, JsonValidationError, OFormat, OWrites, Reads, Writes}
+import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, JsonValidationError, OFormat, OWrites, Reads, Writes, __}
 
 
 /*Json.toJson requires implicits to convert from Scala Objects to JSON files. I opted to collate all
 of them in one area, but this can def be abstracted as you wish.
+
+Most def abstract the type fields, honestly I should've done that, would've saved me a headache and a half.z
+
+Edit: My intial method was dumb lmao, i was adding an additional type field when i can just have unique parameter names lmao.
+
  */
+
+
+
 object JsonFormats {
   //Hierarchical Classes need separate logic to separate them.
   implicit val formatStatus: Format[Status] = new Format[Status] {
@@ -19,86 +27,16 @@ object JsonFormats {
       case _ => JsError("Unknown Status")
     }
   }
-  implicit val messageFormat: Format[Message] = new Format[Message] {
-    override def writes(msg: Message): JsValue = msg match {
-      case cm: ChatMessage => formatChatMessage.writes(cm).as[JsObject] + ("type" -> JsString("chat"))
-      case pm: PostMessage => formatPostMessage.writes(pm).as[JsObject] + ("type" -> JsString("post"))
-    }
-    override def reads(json: JsValue): JsResult[Message] = (json \ "type").validate[String].flatMap {
-      case "chat" => formatChatMessage.reads(json)
-      case "post" => formatPostMessage.reads(json)
-      case _ => JsError("Unknown message type")
-    }
-  }
-
-
-  //Increased Size as SendChat should only have ChatMessage and same for PostChat
-  implicit val formatSendMessage: Format[SendMessage] = new Format[SendMessage] {
-    override def writes(msg: SendMessage): JsValue = msg match {
-      case sc: sendChat => formatSendChat.writes(sc).as[JsObject] + ("type" -> JsString("sendChat"))
-      case sp: sendPost => formatSendPost.writes(sp).as[JsObject] + ("type" -> JsString("sendPost"))
-    }
-
-    override def reads(json: JsValue): JsResult[SendMessage] = (json \ "type").validate[String].flatMap {
-      case "sendChat" =>
-        (json \ "chatMessage").validate[ChatMessage].flatMap { cm =>
-          JsSuccess(sendChat(cm))
-        }.recoverWith(_ => JsError("Missing or invalid 'chatMessage' field for sendChat"))
-
-      case "sendPost" =>
-        (json \ "postMessage").validate[PostMessage].flatMap { pm =>
-          JsSuccess(sendPost(pm))
-        }.recoverWith(_ => JsError("Missing or invalid 'postMessage' field for sendPost"))
-      case other =>
-        JsError(s"Unknown SendMessage type: $other")
-    }
-  }
-
-  implicit val formatUserEvent: Format[UserEvent] = new Format[UserEvent] {
-    override def writes(event: UserEvent): JsValue = event match {
-      case uj: UserJoined => formatUserJoined.writes(uj).as[JsObject] + ("type" -> JsString("UserJoined"))
-      case ul: UserLeft => formatUserLeft.writes(ul).as[JsObject] + ("type" -> JsString("UserLeft"))
-    }
-
-    override def reads(json: JsValue): JsResult[UserEvent] = (json \ "type").validate[String].flatMap {
-      case "UserJoined" =>
-        val jsonWithoutType = json.as[JsObject] - "type"
-        formatUserJoined.reads(jsonWithoutType)
-      case "UserLeft" =>
-        val jsonWithoutType = json.as[JsObject] - "type"
-        formatUserLeft.reads(jsonWithoutType)
-      case other => JsError(s"Unknown user event type: $other")
-    }
-  }
-
-
-
-  implicit val readTypedChatRoom: Reads[ChatRoom] = (json: JsValue) => {
-    (json \ "type").validate[String].flatMap {
-      case "ChatRoom" =>
-        val jsonWithoutType = json.as[JsObject] - "type"
-        formatBaseChatRoom.reads(jsonWithoutType)
-      case other => JsError(s"Unknown Type: $other")
-    }
-  }
-
-  implicit val writeTypedChatRoom: OWrites[ChatRoom] = (chatRoom: ChatRoom) => {
-    formatBaseChatRoom.writes(chatRoom).as[JsObject] + ("type" -> JsString("ChatRoom"))
-  }
-  private val formatBaseChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
-  implicit val formatTypedChatRoom: OFormat[ChatRoom] = OFormat(readTypedChatRoom, writeTypedChatRoom)
-
   implicit val formatUser: OFormat[User] = Json.format[User]
+  implicit val messageFormat: OFormat[Message] = Json.format[Message]
+  implicit val userEventFormat: OFormat[UserEvent] = Json.format[UserEvent]
+  implicit val formatChatRoom: OFormat[ChatRoom] = Json.format[ChatRoom]
   implicit val formatUserJoined: OFormat[UserJoined] = Json.format[UserJoined]
   implicit val formatUserLeft: OFormat[UserLeft] = Json.format[UserLeft]
-
-
-
   implicit val formatPost: OFormat[Post] = Json.format[Post]
   implicit val formatChatMessage: OFormat[ChatMessage] = Json.format[ChatMessage]
   implicit val formatPostMessage: OFormat[PostMessage] = Json.format[PostMessage]
   implicit val formatSendChat: OFormat[sendChat] = Json.format[sendChat]
   implicit val formatSendPost: OFormat[sendPost] = Json.format[sendPost]
-
-
+  implicit val formatJsonRequest: OFormat[JsonRequests] = Json.format[JsonRequests]
 }

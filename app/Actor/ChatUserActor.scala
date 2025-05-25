@@ -15,16 +15,24 @@ import scala.concurrent.duration.DurationInt
 
 
 
-class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRef: String) extends Actor{
+class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRefStr: String) extends Actor{
+  import context.dispatcher
+  implicit val timeout: Timeout = 3.seconds
+
+  private var roomActorRef: Option[ActorRef] = None
 
   override def preStart(): Unit = {
-    ChatManager ! GetRoom(roomRef)
+    val roomFuture = (ChatManager ? GetRoom(roomRefStr)).mapTo[RoomRef]
+    roomFuture.foreach { roomRefMsg =>
+      self ! roomRefMsg
+    }
   }
 
   override def receive: Receive = waitingRoom
 
   private def waitingRoom: Receive = {
     case RoomRef(roomRef) =>
+      roomActorRef = Some(roomRef)
       roomRef ! subscribe(self)
       roomRef ! JoinRoom(user)
       roomRef ! getSnapshot()
@@ -35,11 +43,11 @@ class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRef: S
   }
 
   def ChatOpen(roomRef: ActorRef): Receive = {
-    case sendChat(chatMessage) =>
-      roomRef ! sendChatMessage(user, chatMessage)
+    case sendChat(message) =>
+      roomRef ! sendChatMessage(user, ChatMessage(user = user, chatMessage = message))
 
-    case sendPost(postMessage) =>
-      roomRef ! sendPostMessage(user, postMessage)
+    case sendPost(post) =>
+      roomRef ! sendPostMessage(user, PostMessage(user = user, post = Post(post)))
 
     case getSnapshot() =>
       roomRef ! getSnapshot()
@@ -74,7 +82,11 @@ class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRef: S
   }
 
   override def postStop(): Unit = {
-    context.children.headOption.foreach(_ ! LeaveRoom(user))
-    context.children.headOption.foreach(_ ! unsubscribe(self))
+    roomActorRef match {
+      case Some(ref) =>
+        ref ! LeaveRoom(user)
+        ref ! unsubscribe(self)
+      case None =>
+    }
   }
 }

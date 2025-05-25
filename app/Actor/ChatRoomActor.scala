@@ -2,6 +2,8 @@ package Actor
 
 import model.{ChatMessage, ChatRoom, Message, Offline, Online, Post, PostMessage, User, UserJoined, UserLeft}
 import org.apache.pekko.actor.{Actor, ActorRef}
+import model.JsonFormats._
+import play.api.libs.json.{Json}
 
 import java.time.Instant
 import scala.collection.mutable
@@ -35,19 +37,25 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
     else messages.takeRight(count).toSeq
   }
 
+
   private def createSnapshot(): ChatRoom = {
-    ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
+    print("Printing Snapshot: ")
+    val json = ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
+    println(Json.prettyPrint(Json.toJson(json)))
+    print("Printed Snapshot")
+    json
   }
 
   def receive: Receive = {
     case JoinRoom(user) =>
+      println(s"Entering user ${user.userId}")
       members.update(user.userId, user.copy(status = Online()))
+      sender() ! createSnapshot()
       broadcast(UserJoined(user))
 
 
     case LeaveRoom(user) =>
       members.update(user.userId, user.copy(status = Offline()))
-      sender() ! createSnapshot()
       broadcast(UserLeft(user))
 
 
