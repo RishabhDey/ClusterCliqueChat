@@ -1,6 +1,6 @@
 package Actor
 
-import model.{ChatMessage, ChatRoom, Message, Online, Post, PostMessage, User, UserJoined, UserLeft, sendChat, sendPost}
+import model.{ChatMessage, ChatRoom, Message, Online, Post, PostMessage, User, UserJoined, UserLeft, getMessages, sendChat, sendPost}
 import model.JsonFormats._
 import org.apache.pekko.actor.typed.RecipientRef
 import org.apache.pekko.actor.{Actor, ActorRef}
@@ -43,20 +43,17 @@ class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRefStr
   }
 
   def ChatOpen(roomRef: ActorRef): Receive = {
-    case sendChat(message) =>
+    case sendChat(_, message) =>
       roomRef ! sendChatMessage(user, ChatMessage(user = user, chatMessage = message))
 
-    case sendPost(post) =>
+    case sendPost(_, post) =>
       roomRef ! sendPostMessage(user, PostMessage(user = user, post = Post(post)))
 
     case getSnapshot() =>
       roomRef ! getSnapshot()
 
-    case GetMessages(limit) =>
-      roomRef ! GetMessages(limit)
-
-    case GetMessagesBefore(timestamp, limit) =>
-      roomRef ! GetMessagesBefore(timestamp, limit)
+    case getMessages(_, timestamp, limit) =>
+      roomRef ! getMessagesMessage(timestamp, limit)
 
     case snapshot: ChatRoom =>
       out ! Json.toJson(snapshot)

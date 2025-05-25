@@ -1,9 +1,9 @@
 package Actor
 
-import model.{ChatMessage, ChatRoom, Message, Offline, Online, Post, PostMessage, User, UserJoined, UserLeft}
+import model.{ChatMessage, ChatRoom, Message, Offline, Online, Post, PostMessage, User, UserJoined, UserLeft, getMessages}
 import org.apache.pekko.actor.{Actor, ActorRef}
 import model.JsonFormats._
-import play.api.libs.json.{Json}
+import play.api.libs.json.Json
 
 import java.time.Instant
 import scala.collection.mutable
@@ -16,10 +16,9 @@ case class LeaveRoom(user: User)
 case class sendChatMessage(user: User, chatMessage: ChatMessage)
 case class sendPostMessage(user: User, postMessage: PostMessage)
 case class getSnapshot()
-case class GetMessages(limit: Int)
-case class GetMessagesBefore(timestamp: Instant, limit: Int)
 case class subscribe(actor: ActorRef)
 case class unsubscribe(actor: ActorRef)
+case class getMessagesMessage(timestamp: Instant, limit: Int)
 
 class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
   private val MessageLimit = 90
@@ -71,10 +70,7 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
     case getSnapshot() =>
       sender() ! createSnapshot()
 
-    case GetMessages(limit) =>
-      sender() ! getRecentMessages(limit)
-
-    case GetMessagesBefore(timestamp, limit) =>
+    case getMessagesMessage(timestamp, limit) =>
       val messagesBeforeTime = messages
         .filter(_.dateTime.isBefore(timestamp))
         .takeRight(limit)
