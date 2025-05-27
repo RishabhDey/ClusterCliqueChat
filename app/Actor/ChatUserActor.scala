@@ -7,6 +7,7 @@ import org.apache.pekko.actor.{Actor, ActorRef}
 import org.apache.pekko.util.Timeout
 import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 
 import java.net.URL
 import scala.concurrent.duration.DurationInt
@@ -15,7 +16,7 @@ import scala.concurrent.duration.DurationInt
 
 
 
-class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRefStr: String) extends Actor{
+class ChatUserActor(user: User, out: SourceQueueWithComplete[JsValue], ChatManager: ActorRef, roomRefStr: String) extends Actor{
   import context.dispatcher
   implicit val timeout: Timeout = 3.seconds
 
@@ -56,23 +57,23 @@ class ChatUserActor(user: User, out: ActorRef, ChatManager: ActorRef, roomRefStr
       roomRef ! getMessagesMessage(timestamp, limit)
 
     case snapshot: ChatRoom =>
-      out ! Json.toJson(snapshot)
+      out.offer(Json.toJson(snapshot))
 
     case msgs: Seq[_] if msgs.forall(_.isInstanceOf[Message]) =>
       val typedMsgs = msgs.asInstanceOf[Seq[Message]]
-      out ! Json.toJson(typedMsgs)
+      out.offer(Json.toJson(typedMsgs))
 
     case msg: UserJoined =>
-      out ! Json.toJson(msg)
+      out.offer(Json.toJson(msg))
 
     case msg: UserLeft =>
-      out ! Json.toJson(msg)
+      out.offer(Json.toJson(msg))
 
     case msg: ChatMessage =>
-      out ! Json.toJson(msg)
+      out.offer(Json.toJson(msg))
 
     case msg: PostMessage =>
-      out ! Json.toJson(msg)
+      out.offer(Json.toJson(msg))
 
     case unknown =>
       println(s"ChatUserActor received unknown message: $unknown")
