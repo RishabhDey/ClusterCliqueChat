@@ -36,7 +36,6 @@ class ChatUserActor(user: User, out: SourceQueueWithComplete[JsValue], ChatManag
       roomActorRef = Some(roomRef)
       roomRef ! subscribe(self)
       roomRef ! JoinRoom(user)
-      roomRef ! getSnapshot()
       context.become(ChatOpen(roomRef))
 
     case other =>
@@ -80,7 +79,9 @@ class ChatUserActor(user: User, out: SourceQueueWithComplete[JsValue], ChatManag
   }
 
   override def postStop(): Unit = {
+    print("User Left")
     roomActorRef match {
+
       case Some(ref) =>
         ref ! LeaveRoom(user)
         ref ! unsubscribe(self)

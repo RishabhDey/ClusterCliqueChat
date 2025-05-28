@@ -30,6 +30,10 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
   //Actors within the class
   private var subscribers: Set[ActorRef] = Set.empty
 
+  override def postStop(): Unit = {
+    chatManager ! SaveRoom(roomId)
+  }
+
   private def getRecentMessages(limit: Int = MessageLimit): Seq[Message] = {
     val count = math.min(limit, messages.size)
     if (count == 0) Seq.empty
@@ -38,11 +42,7 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
 
 
   private def createSnapshot(): ChatRoom = {
-    print("Printing Snapshot: ")
-    val json = ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
-    println(Json.prettyPrint(Json.toJson(json)))
-    print("Printed Snapshot")
-    json
+    ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
   }
 
   def receive: Receive = {
@@ -50,14 +50,11 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
       println(s"Entering user ${user.userId}")
       members.update(user.userId, user.copy(status = Online()))
       sender() ! createSnapshot()
-      broadcast(UserJoined(user))
-
+      broadcast(UserJoined(userJoined = user))
 
     case LeaveRoom(user) =>
       members.update(user.userId, user.copy(status = Offline()))
-      broadcast(UserLeft(user))
-
-
+      broadcast(UserLeft(userLeft = user))
 
     case sendChatMessage(user, chatMessage) =>
       messages += chatMessage

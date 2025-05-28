@@ -4,7 +4,9 @@ import scala.collection.concurrent.TrieMap
 
 
 //Database Transfer Use
-case class ChatRoom(members: Seq[User], roomId: String, messages: Seq[Message])
+case class ChatRoom(override val typ: String = "chatRoom", members: Seq[User], roomId: String, messages: Seq[Message]) extends JsonRetrieve{
+  require(typ == "chatRoom", "typ must be 'chatRoom'")
+}
 
 case class UserClique(user: User, cliques: Seq[String])
 

@@ -13,6 +13,7 @@ function initChat(userId, roomId) {
 
   socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
+    console.log("Message Recieved", msg)
     if (Array.isArray(msg)) {
       msg.forEach(handleMessage);
     } else {
@@ -32,23 +33,25 @@ function initChat(userId, roomId) {
 
 
 function handleMessage(msg) {
-    switch (msg.type) {
+    switch (msg.typ) {
         case "chat":
-            appendMessage(`[${msg.user.userId}]: ${msg.message}`);
+            appendMessage(`[${msg.user.userId}]: ${msg.chatMessage}`);
             break;
         case "post":
-            appendMessage(`[${msg.user.userId}]: ${msg.message}`);
+            appendMessage(`[${msg.user.userId}]: ${msg.postMessage}`);
             appendImage(msg.post.imgURL);
             break;
-        case "UserJoined":
-        case "UserLeft":
-            userStatus[msg.user.userId] = msg.user.status.status;
-            updateUserStatus(msg.user.userId, msg.user.status.status);
+        case "userJoined":
+            userStatus[msg.userJoined.userId] = msg.userJoined.status;
+            updateUserStatus(msg.userJoined.userId, msg.userJoined.status);
+        case "userLeft":
+            userStatus[msg.userLeft.userId] = msg.userLeft.status;
+            updateUserStatus(msg.userLeft.userId, msg.userLeft.status);
             break;
-        case "ChatRoom":
-            msg.users.forEach(u => {
-                userStatus[u.userId] = u.status.status;
-                updateUserStatus(u.userId, u.status.status);
+        case "chatRoom":
+            msg.members.forEach(u => {
+                userStatus[u.userId] = u.status;
+                updateUserStatus(u.userId, u.status);
             });
             msg.messages.forEach(handleMessage);
             break;
@@ -74,6 +77,7 @@ function sendChatMessage(currentUser) {
     const text = input.value.trim();
     if (text) {
         const payload = {
+            typ: "sendChat",
             sendChatMessage: text
         };
         socket.send(JSON.stringify(payload));
@@ -90,6 +94,7 @@ function sendPostMessage() {
     const url = input.value.trim();
     if (url) {
         const payload = {
+            typ: "sendPost",
             sendPostMessage: url
         };
         socket.send(JSON.stringify(payload));
