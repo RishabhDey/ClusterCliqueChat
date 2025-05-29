@@ -8,7 +8,7 @@ case class ChatRoom(override val typ: String = "chatRoom", members: Seq[User], r
   require(typ == "chatRoom", "typ must be 'chatRoom'")
 }
 
-case class UserClique(user: User, cliques: Seq[String])
+
 
 
 //This should call to database later
