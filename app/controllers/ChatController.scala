@@ -36,11 +36,12 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
     Ok(views.html.index())
   }
 
-  def chat(roomId: String, userId: String) = Action { implicit request: Request[AnyContent] =>
-    Ok(views.html.chat(roomId, userId))
+  def chat(roomId: String) = Action { implicit request: Request[AnyContent] =>
+    Ok(views.html.chat(roomId, ???))
   }
 
-  def chatSocket(userId: String, roomId: String) = WebSocket.acceptOrResult[JsValue, JsValue] { request =>
+  def chatSocket(roomId: String) = WebSocket.acceptOrResult[JsValue, JsValue] { request =>
+    val userId = ???
     val user = new User(userId, "www.example.com", status = Online())
     implicit val timeout: Timeout = 3.seconds
     val flowFuture = (chatManager ? CreateUserActor(user, roomId)).mapTo[Flow[JsValue, JsValue, _]]
@@ -52,6 +53,10 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
 
   def saveSnapshot(chatRoom: ChatRoom):Unit = {
      chatModel.saveSnapshot(chatRoom)
+  }
+
+  def getSnapshot(roomId: String): Option[ChatRoom] = {
+    chatModel.getSnapshot(roomId)
   }
 
 

@@ -38,7 +38,13 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
 
     case GetRoom(roomId) =>
       println(s"[ChatManager] Starting room $roomId")
-      val roomActor = rooms.getOrElseUpdate(roomId, context.actorOf(Props(new ChatRoomActor(roomId, self)), s"chatRoom-$roomId"))
+      val getChatRoom: Option[ChatRoom] = chatController.getSnapshot(roomId)
+      val roomActor = rooms.getOrElseUpdate(roomId,
+        context.actorOf(
+          Props(new ChatRoomActor(roomId, self, getChatRoom)), s"chatRoom-$roomId")
+
+      )
+
       sender() ! RoomRef(roomActor)
 
 
@@ -59,7 +65,7 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
       val sink = Sink.foreach[JsValue] { jsValue =>
         JsonRequests.parseIncoming(jsValue).foreach(actorRef ! _)
       }
-      print("[ChatManager] Making Flow")
+      println("[ChatManager] Making Flow")
       sender() ! Flow.fromSinkAndSourceCoupledMat(sink, source)(Keep.both).watchTermination() { case ((_, _), termination) =>
         termination.onComplete { _ =>
           println(s"[ChatManager] WebSocket closed, stopping actor for ${user.userId}")
@@ -68,9 +74,11 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
       }
 
     case SaveRoom(roomId) =>
+      println(s"[ChatManager] - ${roomId} is being Saved.")
         rooms(roomId) ! getSnapshot()
 
     case chatRoom: ChatRoom =>
+      println(s"[ChatManager] - A ChatRoom was Sent, Saving.")
       chatController.saveSnapshot(chatRoom)
 
     case unknown =>

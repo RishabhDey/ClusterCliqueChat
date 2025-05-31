@@ -2,7 +2,7 @@ const userStatus = {};
 let socket, chatBox, userTable;
 
 function initChat(userId, roomId) {
-  socket = new WebSocket(`ws://${window.location.host}/ws/chat/${userId}/${roomId}`);
+  socket = new WebSocket(`wss://${window.location.host}/ws/chat/${roomId}?token=${jwt}`);
 
   chatBox = document.getElementById("chatBox");
   userTable = document.getElementById("userStatus");
@@ -44,6 +44,7 @@ function handleMessage(msg) {
         case "userJoined":
             userStatus[msg.userJoined.userId] = msg.userJoined.status;
             updateUserStatus(msg.userJoined.userId, msg.userJoined.status);
+            break;
         case "userLeft":
             userStatus[msg.userLeft.userId] = msg.userLeft.status;
             updateUserStatus(msg.userLeft.userId, msg.userLeft.status);
@@ -126,3 +127,12 @@ function updateUserStatus(userId, status) {
         addUserToTable(userId, status);
     }
 }
+
+const chatInput = document.getElementById("chatInput");
+
+chatInput.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    sendChatMessage();
+  }
+});

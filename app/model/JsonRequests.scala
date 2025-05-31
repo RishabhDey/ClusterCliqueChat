@@ -7,7 +7,6 @@ import java.time.Instant
 
 object JsonRequests {
   def parseIncoming(json: JsValue): Option[JsonRequests] = {
-    print(json)
     (json \ "typ").asOpt[String] match {
       case Some("sendChat")    =>
         json.validate[sendChat].asOpt

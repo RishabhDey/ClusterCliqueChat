@@ -15,3 +15,5 @@ case class UserLeft(override val typ: String = "userLeft", userLeft: User) exten
 
 case class User(userId: String, profileURL: String = "N/A", status: Status = Offline())
 
+
+

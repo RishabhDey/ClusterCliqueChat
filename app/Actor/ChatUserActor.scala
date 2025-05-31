@@ -79,7 +79,6 @@ class ChatUserActor(user: User, out: SourceQueueWithComplete[JsValue], ChatManag
   }
 
   override def postStop(): Unit = {
-    print("User Left")
     roomActorRef match {
 
       case Some(ref) =>

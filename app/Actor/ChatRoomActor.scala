@@ -20,19 +20,29 @@ case class subscribe(actor: ActorRef)
 case class unsubscribe(actor: ActorRef)
 case class getMessagesMessage(timestamp: Instant, limit: Int)
 
-class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
+class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None) extends Actor{
+
+
   private val MessageLimit = 90
 
   //These represent the actual users themselves
-  private val members = mutable.HashMap[String, User]()
-  private val messages = mutable.ArrayBuffer.empty[Message]
+  private val members: mutable.HashMap[String, User] = chatRoom match {
+    case Some(chatRoom) =>
+      mutable.HashMap(chatRoom.members.map(user => user.userId -> user): _*)
+    case None =>
+      mutable.HashMap[String, User] ()
+  }
+  private val messages: mutable.ArrayBuffer[Message] = chatRoom match {
+    case Some(chatRoom) =>
+      mutable.ArrayBuffer[Message](chatRoom.messages: _*)
+    case None =>
+      mutable.ArrayBuffer[Message]()
+  }
+
 
   //Actors within the class
   private var subscribers: Set[ActorRef] = Set.empty
 
-  override def postStop(): Unit = {
-    chatManager ! SaveRoom(roomId)
-  }
 
   private def getRecentMessages(limit: Int = MessageLimit): Seq[Message] = {
     val count = math.min(limit, messages.size)
@@ -43,6 +53,11 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
 
   private def createSnapshot(): ChatRoom = {
     ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
+  }
+
+  override def postStop(): Unit = {
+    chatManager ! createSnapshot()
+    chatManager ! RemoveRoom(roomId)
   }
 
   def receive: Receive = {
@@ -81,6 +96,7 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef) extends Actor{
     case unsubscribe(actor) =>
       subscribers -= actor
       if (subscribers.isEmpty) {
+        chatManager ! SaveRoom(roomId)
         chatManager ! RemoveRoom(roomId)
       }
   }
