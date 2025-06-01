@@ -19,12 +19,16 @@ object AuthUtil {
     kpg.generateKeyPair()
   }
   private val privateKey: PrivateKey = keyPair.getPrivate
-  val publicKey: PublicKey = keyPair.getPublic
 
-  def generateNewRefreshToken(user: User): RefreshToken = {
+  /*If needed in the future (other API calls and such), this can be made public for JWT access for other API calls,
+  just lmk before you do it though.
+  */
+  private val publicKey: PublicKey = keyPair.getPublic
+
+  private[model] def generateNewRefreshToken(user: User): RefreshToken = {
     RefreshToken(user = user, expiry = Instant.now.plus(refreshTokenValidity, refreshTokenUnit))
   }
-  def generateNewAccessToken(user: User): String = {
+  private[model] def generateNewAccessToken(user: User): String = {
     val claim = JwtClaim(subject = Some(user.userId),
                           issuer = Some("ClusterApp"),
                           issuedAt = Some(Instant.now.getEpochSecond),
@@ -32,7 +36,6 @@ object AuthUtil {
     Jwt.encode(claim, privateKey, algorithm)
   }
   def validateUserToken(token: String): Option[String] = {
-
     Jwt.decode(token, publicKey, Seq(algorithm))
       .toOption.filter{ decoded => decoded.isValid}
       .flatMap{_.subject}

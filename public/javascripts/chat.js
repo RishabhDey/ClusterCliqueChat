@@ -22,7 +22,7 @@ function initChat(userId, roomId) {
   };
 
   socket.onerror = (err) => {
-    console.error("WebSocket error", err);
+    window.location.href = "/";
   };
 
   socket.onclose = () => {

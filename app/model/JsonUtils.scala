@@ -1,17 +1,53 @@
 package model
 
 import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, JsonValidationError, OFormat, OWrites, Reads, Writes, __}
+import JsonFormats._
 
+import java.time.Instant
 
-/*Json.toJson requires implicits to convert from Scala Objects to JSON files. I opted to collate all
-of them in one area, but this can def be abstracted as you wish.
+//View -> Controller
+sealed trait JsonRequests {
+  val typ: String
+}
+//Controller -> View
+private[model] trait JsonRetrieve {
+  val typ: String
+}
+object JsonRequests {
+  def parseIncoming(json: JsValue): Option[JsonRequests] = {
+    (json \ "typ").asOpt[String] match {
+      case Some("sendChat")    =>
+        json.validate[sendChat].asOpt
 
-Most def abstract the type fields, honestly I should've done that, would've saved me a headache and a half.z
+      case Some("sendPost")    =>
+        json.validate[sendPost].asOpt
+      case Some("getSnapshot") =>
+        json.validate[getSnapshot].asOpt
+      case Some("getMessages") =>
+        json.validate[getMessages].asOpt
+      case _                   =>
+        print("Conversion Failed")
+        None
+    }
+  }
+}
+sealed trait SendMessage
 
-Edit: My intial method was dumb lmao, i was adding an additional type field when i can just have unique parameter names lmao.
+case class sendChat(override val typ: String = "sendChat", sendChatMessage: String) extends SendMessage with JsonRequests{
+  require(typ == "sendChat", "typ must be 'sendChat'")
+}
 
- */
+case class sendPost(override val typ: String = "sendPost", sendPostMessage: String) extends SendMessage with JsonRequests{
+  require(typ == "sendPost", "typ must be 'sendPost'")
+}
 
+case class getSnapshot(override val typ: String = "getSnapshot") extends JsonRequests{
+  require(typ == "getSnapshot", "typ must be 'getSnapshot'")
+}
+
+case class getMessages(override val typ: String = "getMessages", timestamp: Instant, limit: Int) extends JsonRequests{
+  require(typ == "getMessages", "typ must be 'getMessages'")
+}
 
 
 object JsonFormats {

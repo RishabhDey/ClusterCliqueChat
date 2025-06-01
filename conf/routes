@@ -13,3 +13,5 @@ GET   /ws/chat/:roomId     controllers.ChatController.chatSocket(roomId: String)
 GET   /chat/:roomId        controllers.ChatController.chat(roomId: String)
 
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+GET     /refresh                    controllers.ChatController.refresh

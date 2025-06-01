@@ -1,45 +1,56 @@
 package model
 import java.time.Instant
 import scala.collection.concurrent.TrieMap
-import java.time.temporal.ChronoUnit
-
-
-
-//Database Transfer Use
-case class ChatRoom(override val typ: String = "chatRoom", members: Seq[User], roomId: String, messages: Seq[Message]) extends JsonRetrieve{
-  require(typ == "chatRoom", "typ must be 'chatRoom'")
-}
-
-
 
 
 //This should call to database later
 class ChatModel {
+
+  //These classes are temporary, everything here will eventually be in the Database.
   //maps RoomId -> ChatRoom
   private val allChats = TrieMap[String, ChatRoom]()
   //maps UserId -> RefreshToken
   private val refreshTokens = TrieMap[String, RefreshToken]()
+
+  //maps UserId -> Users
+  private val Users = TrieMap[String, User]()
+
+  def getUser(userId: String) = {
+    Users.get(userId) match {
+      case Some(user) => user
+      case None =>
+        val user = User(userId, "www.example.com", Online())
+        Users(userId) = user
+        user
+    }
+  }
+
   def saveSnapshot(snapshot: ChatRoom): Unit = {
     allChats.update(snapshot.roomId, snapshot)
   }
   def getSnapshot(roomId: String): Option[ChatRoom] = {
     allChats.get(roomId)
   }
-  def getRefreshToken(user: User): Option[RefreshToken] = {
-    refreshTokens.get(user.userId).filter(token => token.user.userId == user.userId && token.expiry.isAfter(Instant.now))
+  def getRefreshToken(refreshTokenStr: String): Option[RefreshToken] = {
+    refreshTokens.get(refreshTokenStr).filter(token => token.expiry.isAfter(Instant.now))
   }
   def setRefreshToken(user: User): Option[RefreshToken] = {
-    refreshTokens(user.userId) = AuthUtil.generateNewRefreshToken(user)
-    refreshTokens.get(user.userId)
+    val token = AuthUtil.generateNewRefreshToken(user)
+    refreshTokens(token.refreshToken) = token
+    refreshTokens.get(token.refreshToken)
   }
-  def getNewAccessToken(user: User, refreshToken: RefreshToken): Option[String] = {
-    getRefreshToken(user).filter(_.equals(refreshToken)).map{_ =>
-      AuthUtil.generateNewAccessToken(user)
+  def getNewAccessToken(userId: String, refreshTokenStr: String): Option[String] = {
+    getRefreshToken(refreshTokenStr).filter(_.user.userId.equals(userId)).map{_ =>
+      AuthUtil.generateNewAccessToken(getUser(userId))
     }
   }
 
 }
 
 
+//Database Transfer Use
+case class ChatRoom(override val typ: String = "chatRoom", members: Seq[User], roomId: String, messages: Seq[Message]) extends JsonRetrieve{
+  require(typ == "chatRoom", "typ must be 'chatRoom'")
+}
 
 
