@@ -1,17 +1,19 @@
 package model
 import java.time.Instant
 import scala.collection.concurrent.TrieMap
-
+import org.mongodb.scala._
+import org.mongodb.scala.model.Filters._
 
 //This should call to database later
 class ChatModel {
+
+  val mongoClient = MongoClient(APIKeys.MongoKey)
 
   //These classes are temporary, everything here will eventually be in the Database.
   //maps RoomId -> ChatRoom
   private val allChats = TrieMap[String, ChatRoom]()
   //maps UserId -> RefreshToken
   private val refreshTokens = TrieMap[String, RefreshToken]()
-
   //maps UserId -> Users
   private val Users = TrieMap[String, User]()
 
@@ -34,8 +36,8 @@ class ChatModel {
   def getRefreshToken(refreshTokenStr: String): Option[RefreshToken] = {
     refreshTokens.get(refreshTokenStr).filter(token => token.expiry.isAfter(Instant.now))
   }
-  def setRefreshToken(user: User): Option[RefreshToken] = {
-    val token = AuthUtil.generateNewRefreshToken(user)
+  def setRefreshToken(userId: String): Option[RefreshToken] = {
+    val token = AuthUtil.generateNewRefreshToken(getUser(userId))
     refreshTokens(token.refreshToken) = token
     refreshTokens.get(token.refreshToken)
   }

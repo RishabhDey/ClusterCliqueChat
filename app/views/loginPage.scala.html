@@ -1,0 +1,13 @@
+@(message: String = "")(implicit request: play.api.mvc.RequestHeader)
+
+@import play.filters.csrf.CSRF
+@main("Login") {
+<form method="POST" action="/login" id="loginForm">
+    @CSRF.getToken.map { token =>
+    <input type="hidden" name="@token.name" value="@token.value">
+    }
+    <input type="text" name="userId" placeholder="Enter user ID" required>
+    <button type="submit">Login</button>
+</form>
+<p>@message</p>
+}

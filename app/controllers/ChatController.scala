@@ -43,17 +43,48 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
     } yield accessToken
     maybeNewAccessToken match {
       case Some(token) => Ok(Json.obj("accessToken" -> token))
-      case None => Redirect("/login")
+      case None =>
+        print("System Failed.")
+        Redirect("/")
     }
   }
 
-  def index: Action[AnyContent] = Action {
-    Ok(views.html.index())
+  def loginPage: Action[AnyContent] = Action { implicit request =>
+    val msg = request.flash.get("error").getOrElse("")
+    Ok(views.html.loginPage(msg))
+  }
+
+  def login: Action[AnyContent] = Action {request =>
+    request.body.asFormUrlEncoded.flatMap(_.get("userId").flatMap(_.headOption)) match {
+      case Some(userId)=>
+        chatModel.setRefreshToken(userId) match {
+          case Some(refreshToken) =>
+            println(refreshToken.refreshToken)
+            Redirect("/").withCookies(
+              Cookie(
+                name = "refreshToken",
+                value = refreshToken.refreshToken,
+                httpOnly = true,
+                secure = false,
+                maxAge = Some(18000),
+                sameSite = Some(Cookie.SameSite.Strict)
+              )
+            ).flashing("message" -> "Login Successful")
+          case None =>
+            print("Refresh Token Not Made")
+            Redirect("/")
+        }
+      case None =>
+        println("UserId Not Found")
+        Redirect("/")
+    }
+
   }
 
   def chat(roomId: String): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
-    Ok(views.html.chat(roomId, ???))
+    Ok(views.html.chat(roomId))
   }
+
 
 
   def chatSocket(roomId: String) = WebSocket.acceptOrResult[JsValue, JsValue] { request =>

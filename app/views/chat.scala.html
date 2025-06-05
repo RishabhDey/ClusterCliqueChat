@@ -1,7 +1,7 @@
-@(roomId: String, userId: String)
+@(roomId: String)
 
 @main("Chat Room") {
-    <h2>Room: @roomId | User: @userId</h2>
+    <h2>Room: @roomId</h2>
     <div style = "display: flex; gap: 20px;">
         <div style = "flex: 2;">
             <div id="chatBox"></div>
@@ -33,8 +33,23 @@
     </div>
     <script src='@routes.Assets.versioned("javascripts/chat.js")'></script>
     <script type="text/javascript">
-        const userId = '@userId';
-        initChat("@userId", "@roomId");
+        const roomId = "@roomId";
+
+        async function startChat() {
+            try{
+                const refreshResponse = await fetch("/refresh", {credentials: "include"});
+                if(!refreshResponse.ok) {
+                    throw new Error("Failed");
+                }
+                const data = await refreshResponse.json()
+                const token = data.accessToken;
+                initChat(roomId, token)
+            } catch (error) {
+                console.error("JWT Token Refresh Failed", error);
+                window.location.href = "/";
+            }
+        }
+        startChat();
     </script>
 
 

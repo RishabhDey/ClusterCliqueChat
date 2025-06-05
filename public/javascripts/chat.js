@@ -1,9 +1,9 @@
 const userStatus = {};
 let socket, chatBox, userTable;
 
-function initChat(userId, roomId) {
-  socket = new WebSocket(`wss://${window.location.host}/ws/chat/${roomId}?token=${jwt}`);
-
+function initChat(roomId, jwt) {
+  socket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomId}?token=${jwt}`);
+  console.log(jwt);
   chatBox = document.getElementById("chatBox");
   userTable = document.getElementById("userStatus");
 
