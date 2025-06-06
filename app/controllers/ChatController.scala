@@ -1,23 +1,16 @@
 package controllers
 
 import javax.inject._
-import play.api._
 import play.api.mvc._
-import Actor.{ChatManager, ChatUserActor, CreateUserActor}
-import model.{AuthUtil, ChatModel, ChatRoom, JsonRequests, Online, User}
-import org.apache.pekko.NotUsed
+import Actor.{ChatManager, CreateUserActor}
+import model.{AuthUtil, ChatModel, ChatRoom, MessageBlock}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.{Materializer, OverflowStrategy}
-import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source, SourceQueue}
-import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Flow
 import org.apache.pekko.util.Timeout
 import play.api.libs.json.{JsValue, Json}
-import play.api.libs.streams.ActorFlow
-import views.html._
-
-import java.lang.System.console
-import java.net.URL
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 /**
@@ -112,10 +105,15 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
 
   def saveSnapshot(chatRoom: ChatRoom):Unit = {
      chatModel.saveSnapshot(chatRoom)
+    chatModel.writeChatRoomToMB(chatRoom)
   }
 
   def getSnapshot(roomId: String): Option[ChatRoom] = {
     chatModel.getSnapshot(roomId)
+  }
+
+  def getMessageBlock(roomId: String, lastTakenMessageIndex: Option[UUID]):Option[MessageBlock] = {
+     chatModel.getMessageBlockFromDB(roomId, lastTakenMessageIndex)
   }
 
 

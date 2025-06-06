@@ -1,7 +1,7 @@
 package Actor
 
 import controllers.ChatController
-import model.{ChatRoom, JsonRequests, User}
+import model.{ChatRoom, JsonRequests, MessageBlock, User}
 import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props}
 import model.JsonFormats._
 import org.apache.pekko.stream.{Materializer, OverflowStrategy}
@@ -72,10 +72,15 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
           context.stop(actorRef)
         }
       }
+    case getMessageBlock(roomId, lastTakenMessageIndex) =>
+      chatController.getMessageBlock(roomId, lastTakenMessageIndex) match {
+        case Some(messageBlock) => sender() ! messageBlock
+      }
+
 
     case SaveRoom(roomId) =>
       println(s"[ChatManager] - ${roomId} is being Saved.")
-        rooms(roomId) ! getSnapshot()
+        rooms(roomId) ! saveSnapshot()
 
     case chatRoom: ChatRoom =>
       println(s"[ChatManager] - A ChatRoom was Sent, Saving.")

@@ -1,15 +1,12 @@
 package Actor
 
-import model.{ChatMessage, ChatRoom, Message, Online, Post, PostMessage, User, UserJoined, UserLeft, getMessages, sendChat, sendPost}
+import model.{ChatMessage, ChatRoom, Message, Post, PostMessage, User, UserJoined, UserLeft, getMessages, sendChat, sendPost}
 import model.JsonFormats._
-import org.apache.pekko.actor.typed.RecipientRef
 import org.apache.pekko.actor.{Actor, ActorRef}
 import org.apache.pekko.util.Timeout
-import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{JsValue, Json}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
-
-import java.net.URL
 import scala.concurrent.duration.DurationInt
 
 

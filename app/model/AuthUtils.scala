@@ -1,6 +1,5 @@
 package model
 import java.time.Clock
-
 import java.security.{KeyPairGenerator, PrivateKey, PublicKey}
 import java.time.Instant
 import java.time.temporal.ChronoUnit

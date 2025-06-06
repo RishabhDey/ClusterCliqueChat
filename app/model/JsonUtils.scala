@@ -1,6 +1,6 @@
 package model
 
-import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, JsonValidationError, OFormat, OWrites, Reads, Writes, __}
+import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 import JsonFormats._
 
 import java.time.Instant

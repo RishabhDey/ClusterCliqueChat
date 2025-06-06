@@ -6,6 +6,7 @@ import model.JsonFormats._
 import play.api.libs.json.Json
 
 import java.time.Instant
+import java.util.UUID
 import scala.collection.mutable
 
 
@@ -16,14 +17,19 @@ case class LeaveRoom(user: User)
 case class sendChatMessage(user: User, chatMessage: ChatMessage)
 case class sendPostMessage(user: User, postMessage: PostMessage)
 case class getSnapshot()
+
+case class saveSnapshot()
 case class subscribe(actor: ActorRef)
 case class unsubscribe(actor: ActorRef)
 case class getMessagesMessage(timestamp: Instant, limit: Int)
 
-class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None) extends Actor{
+case class getMessageBlock(roomId: String, lastTakenMessageIndex: Option[UUID])
+
+class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None, messageIdx: Option[UUID] = None) extends Actor{
 
 
   private val MessageLimit = 90
+  private val lastTakenMessageIndex: Option[UUID] = messageIdx
 
   //These represent the actual users themselves
   private val members: mutable.HashMap[String, User] = chatRoom match {
@@ -40,19 +46,33 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
   }
 
 
+
+
   //Actors within the class
   private var subscribers: Set[ActorRef] = Set.empty
 
 
   private def getRecentMessages(limit: Int = MessageLimit): Seq[Message] = {
+
+    if (limit == 0) Seq.empty
+    else if(limit <= messages.size) messages.takeRight(limit).toSeq
+    else{
+      chatManager ! getMessageBlock(roomId, lastTakenMessageIndex)
+    }
     val count = math.min(limit, messages.size)
     if (count == 0) Seq.empty
     else messages.takeRight(count).toSeq
   }
 
 
-  private def createSnapshot(): ChatRoom = {
-    ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
+  private def createSnapshot(msg_idx: Option[Int] = None): ChatRoom = {
+    msg_idx match {
+      case Some(idx) =>
+        ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages(idx))
+      case None =>
+        ChatRoom(members = members.values.toSeq, roomId = roomId, messages = getRecentMessages())
+    }
+
   }
 
   override def postStop(): Unit = {
@@ -78,6 +98,9 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
     case sendPostMessage(user, postMessage) =>
       messages += postMessage
       broadcast(postMessage)
+
+    case saveSnapshot() =>
+      chatManager ! createSnapshot(Some(messages.size))
 
     case getSnapshot() =>
       sender() ! createSnapshot()
