@@ -10,6 +10,8 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Flow
 import org.apache.pekko.util.Timeout
 import play.api.libs.json.{JsValue, Json}
+
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -108,12 +110,18 @@ class ChatController @Inject()(val controllerComponents: ControllerComponents)
     chatModel.writeChatRoomToMB(chatRoom)
   }
 
-  def getSnapshot(roomId: String): Option[ChatRoom] = {
-    chatModel.getSnapshot(roomId)
+  def getSnapshot(roomId: String): Future[(Option[ChatRoom], Option[Instant])] = {
+    chatModel.readChatRoomFromDB(roomId)
   }
 
-  def getMessageBlock(roomId: String, lastTakenMessageIndex: Option[UUID]):Option[MessageBlock] = {
-     chatModel.getMessageBlockFromDB(roomId, lastTakenMessageIndex)
+  def getMessages(roomId: String, lastTakenTimeStamp: Option[Instant]):Future[Option[MessageBlock]] = {
+     chatModel.readMessageBlockFromDB(roomId, lastTakenTimeStamp)
+  }
+
+
+  //This leads to automatically be called along with RSDB clique entrance as the user should also always be in here.
+  def addUser(roomId: String, userId: String): Unit = {
+
   }
 
 

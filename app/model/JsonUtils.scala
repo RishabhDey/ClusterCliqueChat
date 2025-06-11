@@ -77,4 +77,5 @@ object JsonFormats {
   implicit val formatJsonRequest: OFormat[JsonRequests] = Json.format[JsonRequests]
   implicit val formatGetMessages: OFormat[getMessages] = Json.format[getMessages]
   implicit val formatGetSnapshot: OFormat[getSnapshot] = Json.format[getSnapshot]
+  implicit val formatMessageBlock: OFormat[MessageBlock] = Json.format[MessageBlock]
 }

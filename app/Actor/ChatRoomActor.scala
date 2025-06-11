@@ -1,6 +1,6 @@
 package Actor
 
-import model.{ChatMessage, ChatRoom, Message, Offline, Online, Post, PostMessage, User, UserJoined, UserLeft, getMessages}
+import model.{ChatMessage, ChatRoom, Message, MessageBlock, Offline, Online, Post, PostMessage, User, UserJoined, UserLeft, getMessages}
 import org.apache.pekko.actor.{Actor, ActorRef}
 import model.JsonFormats._
 import play.api.libs.json.Json
@@ -22,14 +22,13 @@ case class saveSnapshot()
 case class subscribe(actor: ActorRef)
 case class unsubscribe(actor: ActorRef)
 case class getMessagesMessage(timestamp: Instant, limit: Int)
+case class getMessageBlock(roomId: String, lastTakenMessageIndex: Option[Instant])
 
-case class getMessageBlock(roomId: String, lastTakenMessageIndex: Option[UUID])
-
-class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None, messageIdx: Option[UUID] = None) extends Actor{
+class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None, timeStamp: Option[Instant] = None) extends Actor{
 
 
   private val MessageLimit = 90
-  private val lastTakenMessageIndex: Option[UUID] = messageIdx
+  private var lastTakenMessageTimeStamp = timeStamp
 
   //These represent the actual users themselves
   private val members: mutable.HashMap[String, User] = chatRoom match {
@@ -57,7 +56,7 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
     if (limit == 0) Seq.empty
     else if(limit <= messages.size) messages.takeRight(limit).toSeq
     else{
-      chatManager ! getMessageBlock(roomId, lastTakenMessageIndex)
+      chatManager ! getMessageBlock(roomId, lastTakenMessageTimeStamp)
     }
     val count = math.min(limit, messages.size)
     if (count == 0) Seq.empty
@@ -122,6 +121,10 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
         chatManager ! SaveRoom(roomId)
         chatManager ! RemoveRoom(roomId)
       }
+
+    case messageBlock: MessageBlock =>
+      messages.prependAll(messageBlock.messages)
+      lastTakenMessageTimeStamp = Some(messageBlock.timeStamp)
   }
 
   private def broadcast(message: Any): Unit = {

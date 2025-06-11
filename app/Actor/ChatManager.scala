@@ -4,13 +4,15 @@ import controllers.ChatController
 import model.{ChatRoom, JsonRequests, MessageBlock, User}
 import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props}
 import model.JsonFormats._
-import org.apache.pekko.stream.{Materializer, OverflowStrategy}
+import org.apache.pekko.pattern.pipe
+import org.apache.pekko.stream.{Materializer, OverflowStrategy, ThrottleMode}
 import org.apache.pekko.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.apache.pekko.util.Timeout
 import play.api.libs.json.JsValue
 
+import java.time.Instant
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 
 case class GetRoom(roomId: String)
@@ -21,6 +23,12 @@ case class SaveRoom(roomId: String)
 case class getRoomSnapshot(roomId: String)
 
 case class CreateUserActor(user: User, roomId: String)
+
+case class LoadedChatRoom(roomId: String, chatRoom: ChatRoom, timestamp: Option[Instant])
+
+case class RoomNotFound(roomId: String)
+
+case class SyncedMessageBlock(roomId: String, messages: MessageBlock)
 
 //The chatManager is essentially the websocket "model" for all the chat system, it sends everything to the model periodically to store.
 
@@ -36,17 +44,33 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
   def receive: Receive = {
 
 
+
+
     case GetRoom(roomId) =>
+      val originalSender = sender()
+
+      val getChatRoom: Future[(Option[ChatRoom], Option[Instant])] = chatController.getSnapshot(roomId)
+      getChatRoom.map{
+        case(Some(chatRoom), timestamp) =>
+          LoadedChatRoom(roomId, chatRoom, timestamp)
+        case(None, _) =>
+          RoomNotFound(roomId)
+      }.pipeTo(self)(originalSender)
+
+    case LoadedChatRoom(roomId, chatRoom, timestamp) =>
       println(s"[ChatManager] Starting room $roomId")
-      val getChatRoom: Option[ChatRoom] = chatController.getSnapshot(roomId)
-      val roomActor = rooms.getOrElseUpdate(roomId,
-        context.actorOf(
-          Props(new ChatRoomActor(roomId, self, getChatRoom)), s"chatRoom-$roomId")
-
-      )
-
+      val roomActor = rooms.getOrElseUpdate(roomId, context.actorOf(
+      Props(new ChatRoomActor(roomId = roomId, chatManager = self, chatRoom = Some(chatRoom), timeStamp = timestamp)),
+        s"chatRoom-$roomId"))
       sender() ! RoomRef(roomActor)
 
+
+    case RoomNotFound(roomId) =>
+      println(s"[ChatManager] Starting room $roomId")
+      val roomActor = rooms.getOrElseUpdate(roomId, context.actorOf(
+        Props(new ChatRoomActor(roomId = roomId, chatManager = self, chatRoom = None, timeStamp = None)),
+        s"chatRoom-$roomId"))
+      sender() ! RoomRef(roomActor)
 
     //Add save room functionality later by calling controller and adding to model.
     case RemoveRoom(roomId) =>
@@ -62,9 +86,11 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
     case CreateUserActor(user, roomId) =>
       val (queue, source) = Source.queue[JsValue](16, OverflowStrategy.backpressure).preMaterialize()
       val actorRef = context.actorOf(Props(new ChatUserActor(user, queue, self, roomId)))
-      val sink = Sink.foreach[JsValue] { jsValue =>
+      val sink = Flow[JsValue]
+        .throttle(5, 1.second, 5, ThrottleMode.Shaping)
+        .to(Sink.foreach[JsValue] { jsValue =>
         JsonRequests.parseIncoming(jsValue).foreach(actorRef ! _)
-      }
+      })
       println("[ChatManager] Making Flow")
       sender() ! Flow.fromSinkAndSourceCoupledMat(sink, source)(Keep.both).watchTermination() { case ((_, _), termination) =>
         termination.onComplete { _ =>
@@ -72,10 +98,14 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
           context.stop(actorRef)
         }
       }
-    case getMessageBlock(roomId, lastTakenMessageIndex) =>
-      chatController.getMessageBlock(roomId, lastTakenMessageIndex) match {
-        case Some(messageBlock) => sender() ! messageBlock
-      }
+    case getMessageBlock(roomId, lastTakenMessageTimeStamp) =>
+      chatController.getMessages(roomId, lastTakenMessageTimeStamp).map{
+        case Some(messages) =>
+          SyncedMessageBlock(roomId, messages)
+      }.pipeTo(self)
+
+    case SyncedMessageBlock(roomId, messages) =>
+      rooms(roomId) ! messages
 
 
     case SaveRoom(roomId) =>
@@ -96,4 +126,6 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
     super.postStop()
   }
 }
+
+
 
