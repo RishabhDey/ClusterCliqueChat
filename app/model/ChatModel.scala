@@ -63,7 +63,7 @@ class ChatModel()(implicit ec: ExecutionContext) {
   }
 
   def writeChatRoomToMB(chatRoom: ChatRoom) = {
-    val blockIds = chatRoom.messages.filter(!_.messageStored).grouped(100).map { messages =>
+    val blockIds = chatRoom.messages.filter(!_.messageStored).grouped(30).map { messages =>
       val id = UUID.randomUUID()
       val block = MessageBlock(messageId = id, roomId = chatRoom.roomId, messages = messages, timeStamp = messages.head.dateTime)
       messagesCollection.insertOne(Document(block.toString())).toFuture()

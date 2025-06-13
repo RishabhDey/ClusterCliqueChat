@@ -7,6 +7,7 @@ function initChat(roomId, jwt) {
   chatBox = document.getElementById("chatBox");
   userTable = document.getElementById("userStatus");
 
+
   socket.onopen = () => {
     console.log("WebSocket is connected");
   };
@@ -29,7 +30,11 @@ function initChat(roomId, jwt) {
     console.log("WebSocket connection closed");
   };
 
+  chatBox.addEventListener('scroll', handleScroll);
+
 }
+
+
 
 
 function handleMessage(msg) {

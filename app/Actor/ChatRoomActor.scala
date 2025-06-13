@@ -21,14 +21,28 @@ case class getSnapshot()
 case class saveSnapshot()
 case class subscribe(actor: ActorRef)
 case class unsubscribe(actor: ActorRef)
-case class getMessagesMessage(timestamp: Instant, limit: Int)
-case class getMessageBlock(roomId: String, lastTakenMessageIndex: Option[Instant])
+case class getMessagesMessage(timestamp: Instant, limit: Int, request: Option[ActorRef] = None)
 
+case class getMessageBlock(roomId: String, lastTakenMessageIndex: Option[Instant], requestUser: Option[ActorRef])
+
+case class RecievedMessageBlock(messages: MessageBlock, request: Option[ActorRef])
+
+
+
+/*
+Every specific chatRoom has their own specific chat room
+actor. This actor controls all the information that extends
+to the users too. This can be classified as temporary storage
+for easier access.
+ */
 class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[ChatRoom] = None, timeStamp: Option[Instant] = None) extends Actor{
 
 
-  private val MessageLimit = 90
+  private val MessageLimit = 30
+
   private var lastTakenMessageTimeStamp = timeStamp
+
+
 
   //These represent the actual users themselves
   private val members: mutable.HashMap[String, User] = chatRoom match {
@@ -53,10 +67,10 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
 
   private def getRecentMessages(limit: Int = MessageLimit): Seq[Message] = {
 
-    if (limit == 0) Seq.empty
+    if (limit == 0) return Seq.empty
     else if(limit <= messages.size) messages.takeRight(limit).toSeq
     else{
-      chatManager ! getMessageBlock(roomId, lastTakenMessageTimeStamp)
+      chatManager ! getMessageBlock(roomId, lastTakenMessageTimeStamp, None)
     }
     val count = math.min(limit, messages.size)
     if (count == 0) Seq.empty
@@ -104,12 +118,24 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
     case getSnapshot() =>
       sender() ! createSnapshot()
 
-    case getMessagesMessage(timestamp, limit) =>
+    case getMessagesMessage(timestamp, limit, request) =>
       val messagesBeforeTime = messages
         .filter(_.dateTime.isBefore(timestamp))
         .takeRight(limit)
         .toSeq
-      sender() ! messagesBeforeTime
+      if(messagesBeforeTime.size < 30){
+        chatManager ! getMessageBlock(roomId = roomId,
+          lastTakenMessageIndex = lastTakenMessageTimeStamp,
+          requestUser = Some(sender()))
+      }else {
+        request match {
+          case Some(request) =>
+            request ! messagesBeforeTime
+          case None =>
+            sender() ! messagesBeforeTime
+        }
+
+      }
 
     case subscribe(actor) =>
       subscribers += actor
@@ -125,8 +151,16 @@ class ChatRoomActor(roomId: String, chatManager: ActorRef, chatRoom: Option[Chat
     case messageBlock: MessageBlock =>
       messages.prependAll(messageBlock.messages)
       lastTakenMessageTimeStamp = Some(messageBlock.timeStamp)
-  }
 
+    case RecievedMessageBlock(messageBlock, o_sender) =>
+      messages.prependAll(messageBlock.messages)
+      val currTimeStamp = lastTakenMessageTimeStamp
+      lastTakenMessageTimeStamp = Some(messageBlock.timeStamp)
+      currTimeStamp match {
+        case Some(currTS) =>
+          self ! getMessagesMessage(currTS,MessageLimit, o_sender)
+      }
+  }
   private def broadcast(message: Any): Unit = {
     subscribers.foreach(_ ! message)
   }

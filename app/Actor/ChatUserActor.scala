@@ -12,6 +12,12 @@ import scala.concurrent.duration.DurationInt
 
 
 
+/*
+This represents each individual user. Every user in EVERY clique needs
+their seperate actor to be initialized when they JOIN a chat. This should not
+always be initialized for all users. All user
+actions in chats should be described here.
+ */
 
 class ChatUserActor(user: User, out: SourceQueueWithComplete[JsValue], ChatManager: ActorRef, roomRefStr: String) extends Actor{
   import context.dispatcher

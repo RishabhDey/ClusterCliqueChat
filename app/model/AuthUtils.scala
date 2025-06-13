@@ -6,6 +6,14 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtClaim}
 
+
+/*
+Initializes a secure JWT token for access and refresh token for
+the user to store in cookies. Refresh Token should only be used in POST
+requests and should only be used to request JWT.
+
+All functions have descriptive names.
+ */
 object AuthUtil {
   implicit val clock: Clock = Clock.systemUTC()
 

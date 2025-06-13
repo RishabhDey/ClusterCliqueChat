@@ -5,6 +5,14 @@ import JsonFormats._
 
 import java.time.Instant
 
+
+/*
+Majority of what exists in this file already will not be used by you,
+however any case classes that users will directly access or send MUST
+be placed here. If user is sending a case class, that class must extend
+JSONRequests while if the Controller is sending data,
+it must extend JSONRetrieve.
+ */
 //View -> Controller
 sealed trait JsonRequests {
   val typ: String
@@ -13,6 +21,7 @@ sealed trait JsonRequests {
 private[model] trait JsonRetrieve {
   val typ: String
 }
+
 object JsonRequests {
   def parseIncoming(json: JsValue): Option[JsonRequests] = {
     (json \ "typ").asOpt[String] match {

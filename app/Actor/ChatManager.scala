@@ -28,10 +28,15 @@ case class LoadedChatRoom(roomId: String, chatRoom: ChatRoom, timestamp: Option[
 
 case class RoomNotFound(roomId: String)
 
-case class SyncedMessageBlock(roomId: String, messages: MessageBlock)
+case class SyncedMessageBlock(roomId: String, messages: MessageBlock, request: Option[ActorRef])
 
-//The chatManager is essentially the websocket "model" for all the chat system, it sends everything to the model periodically to store.
+/*The chatManager is essentially the websocket "model"
+for all the chat system, it sends everything to the model periodically
+to store. It is what requests data from the database such as messageBlocks
+but it also creates the Users, I might eventually move this to the ChatRooms.
+All case classes have descriptive names.
 
+ */
 class ChatManager(chatController: ChatController)(implicit mat: Materializer) extends Actor{
 
   implicit val ec: ExecutionContext = context.system.dispatcher
@@ -98,14 +103,18 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
           context.stop(actorRef)
         }
       }
-    case getMessageBlock(roomId, lastTakenMessageTimeStamp) =>
+    case getMessageBlock(roomId, lastTakenMessageTimeStamp, request) =>
       chatController.getMessages(roomId, lastTakenMessageTimeStamp).map{
         case Some(messages) =>
-          SyncedMessageBlock(roomId, messages)
+          SyncedMessageBlock(roomId, messages, request)
+
+        case None =>
+          NoPreviousMessages(roomId)
       }.pipeTo(self)
 
-    case SyncedMessageBlock(roomId, messages) =>
-      rooms(roomId) ! messages
+    case SyncedMessageBlock(roomId, messages, request) =>
+      rooms(roomId) ! RecievedMessageBlock(messages, request)
+
 
 
     case SaveRoom(roomId) =>
@@ -126,6 +135,8 @@ class ChatManager(chatController: ChatController)(implicit mat: Materializer) ex
     super.postStop()
   }
 }
+
+case class NoPreviousMessages(roomId: String)
 
 
 
